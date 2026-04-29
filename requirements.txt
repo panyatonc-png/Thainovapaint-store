@@ -1,4 +1,4 @@
 streamlit
 pandas
-google-cloud-spreadsheet
 gspread
+google-auth
