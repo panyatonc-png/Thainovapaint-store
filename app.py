@@ -2,7 +2,43 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
+st.markdown("""
+    <style>
+    /* ปรับแต่งฟอนต์และพื้นหลัง */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
 
+    /* ปรับแต่งการ์ด (Containers) ให้ดูมีมิติ */
+    div[data-testid="stMetricValue"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ปรับแต่งปุ่มให้ดูโค้งมนสไตล์ Apple */
+    .stButton>button {
+        border-radius: 20px;
+        padding: 10px 25px;
+        border: none;
+        transition: all 0.3s ease;
+        background-color: #007AFF; /* สีน้ำเงิน Apple */
+        color: white;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 122, 255, 0.4);
+    }
+
+    /* ปรับแต่งตารางให้ดูสะอาดตา */
+    .stDataFrame {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 # -----------------------------
 # 0. INITIALIZATION (เตรียมระบบ)
 # -----------------------------
@@ -376,7 +412,21 @@ def admin_view(stock_df, reorder_df, shelf_map_df, purchase_df, lot_df):
 # --- Tab 4: บริหารการเงินร้านค้า ---
     with admin_tabs[4]:
         st.subheader("💰 สรุปยอดสั่งซื้อรายเดือน (Accounts Payable)")
-        
+		# ใช้ Columns สร้าง Dashboard เล็กๆ
+		    col1, col2, col3 = st.columns(3)
+		    with col1:
+		        st.metric("ยอดสั่งซื้อรวม", f"{total_monthly_buy:,.2f} ฿", delta="ซื้อเพิ่มขึ้น 5%")
+		    with col2:
+		        st.metric("จำนวน Supplier", len(supplier_summary))
+		    with col3:
+		        st.metric("สถานะคลัง", "พร้อมใช้งาน ✅")
+		
+		    st.divider()
+		    
+		    # แสดงกราฟแท่งแบบเรียบง่าย (Streamlit มีกราฟที่ดูดีมาก)
+		    st.write("### 📊 ยอดซื้อแยกตามผู้ขาย")
+		    st.bar_chart(supplier_summary.set_index('ชื่อบริษัทผู้ขาย'))  
+		
         if not purchase_df.empty:
             # เตรียมข้อมูลวันที่ให้เป็นรูปแบบ Datetime
             purchase_df['วันที่'] = pd.to_datetime(purchase_df['วันที่'], errors='coerce')
