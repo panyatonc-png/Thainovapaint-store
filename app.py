@@ -413,19 +413,19 @@ def admin_view(stock_df, reorder_df, shelf_map_df, purchase_df, lot_df):
     with admin_tabs[4]:
         st.subheader("💰 สรุปยอดสั่งซื้อรายเดือน (Accounts Payable)")
 		# ใช้ Columns สร้าง Dashboard เล็กๆ
-		    col1, col2, col3 = st.columns(3)
-		    with col1:
-		        st.metric("ยอดสั่งซื้อรวม", f"{total_monthly_buy:,.2f} ฿", delta="ซื้อเพิ่มขึ้น 5%")
-		    with col2:
-		        st.metric("จำนวน Supplier", len(supplier_summary))
-		    with col3:
-		        st.metric("สถานะคลัง", "พร้อมใช้งาน ✅")
+		col1, col2, col3 = st.columns(3)
+		with col1:
+		    st.metric("ยอดสั่งซื้อรวม", f"{total_monthly_buy:,.2f} ฿", delta="ซื้อเพิ่มขึ้น 5%")
+		with col2:
+		    st.metric("จำนวน Supplier", len(supplier_summary))
+		with col3:
+		    st.metric("สถานะคลัง", "พร้อมใช้งาน ✅")
 		
-		    st.divider()
+		st.divider()
 		    
-		    # แสดงกราฟแท่งแบบเรียบง่าย (Streamlit มีกราฟที่ดูดีมาก)
-		    st.write("### 📊 ยอดซื้อแยกตามผู้ขาย")
-		    st.bar_chart(supplier_summary.set_index('ชื่อบริษัทผู้ขาย'))  
+		# แสดงกราฟแท่งแบบเรียบง่าย (Streamlit มีกราฟที่ดูดีมาก)
+		st.write("### 📊 ยอดซื้อแยกตามผู้ขาย")
+		st.bar_chart(supplier_summary.set_index('ชื่อบริษัทผู้ขาย'))  
 		
         if not purchase_df.empty:
             # เตรียมข้อมูลวันที่ให้เป็นรูปแบบ Datetime
