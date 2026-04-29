@@ -409,92 +409,65 @@ def admin_view(stock_df, reorder_df, shelf_map_df, purchase_df, lot_df):
         else:
             st.warning("⚠️ ไม่พบข้อมูล Lot Tracking กรุณาตรวจสอบแท็บ Lot_Tracking ใน Google Sheets")
 
-# --- Tab 4: บริหารการเงินร้านค้า ---
+# --- Tab 4: บริหารการเงินร้านค้า (Samsung/Apple Style) ---
     with admin_tabs[4]:
-        st.subheader("💰 สรุปยอดสั่งซื้อรายเดือน (Accounts Payable)")
-		# ใช้ Columns สร้าง Dashboard เล็กๆ
-		col1, col2, col3 = st.columns(3)
-		with col1:
-		    st.metric("ยอดสั่งซื้อรวม", f"{total_monthly_buy:,.2f} ฿", delta="ซื้อเพิ่มขึ้น 5%")
-		with col2:
-		    st.metric("จำนวน Supplier", len(supplier_summary))
-		with col3:
-		    st.metric("สถานะคลัง", "พร้อมใช้งาน ✅")
-		
-		st.divider()
-		    
-		# แสดงกราฟแท่งแบบเรียบง่าย (Streamlit มีกราฟที่ดูดีมาก)
-		st.write("### 📊 ยอดซื้อแยกตามผู้ขาย")
-		st.bar_chart(supplier_summary.set_index('ชื่อบริษัทผู้ขาย'))  
-		
+        st.markdown("<h2 style='text-align: center;'>💰 Financial Insights</h2>", unsafe_allow_html=True)
+        st.caption("สรุปภาพรวมกระแสเงินสดขาออกรายเดือนแยกตามบริษัท")
+        
         if not purchase_df.empty:
-            # เตรียมข้อมูลวันที่ให้เป็นรูปแบบ Datetime
+            # เตรียมข้อมูลวันที่
             purchase_df['วันที่'] = pd.to_datetime(purchase_df['วันที่'], errors='coerce')
-            
-            # กรองปีและเดือน (ดึงเฉพาะปีที่มีข้อมูลจริง)
             years_fin = sorted([int(y) for y in purchase_df['วันที่'].dt.year.unique() if pd.notna(y)], reverse=True)
             month_names = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", 
                            "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
 
+            # ส่วนการเลือกเดือน/ปี (จัดเรียงแบบสะอาดตา)
             cf1, cf2 = st.columns(2)
-            sel_year_fin = cf1.selectbox("เลือกปี (การเงิน):", years_fin, key="fin_year")
-            sel_month_fin = cf2.selectbox("เลือกเดือน (การเงิน):", range(1, 13), 
-                                          index=datetime.now().month-1, 
-                                          format_func=lambda x: month_names[x-1], 
-                                          key="fin_month")
+            with cf1:
+                sel_year_fin = st.selectbox("เลือกปี (การเงิน):", years_fin, key="fin_year")
+            with cf2:
+                sel_month_fin = st.selectbox("เลือกเดือน (การเงิน):", range(1, 13), 
+                                             index=datetime.now().month-1, 
+                                             format_func=lambda x: month_names[x-1], 
+                                             key="fin_month")
 
-            # กรองข้อมูลตามเดือน/ปีที่เลือก
+            # กรองข้อมูล
             df_monthly_fin = purchase_df[
                 (purchase_df['วันที่'].dt.year == sel_year_fin) & 
                 (purchase_df['วันที่'].dt.month == sel_month_fin)
             ]
 
             if not df_monthly_fin.empty:
-                # --- ส่วนสรุปยอด Metric ---
+                # คำนวณยอดรวม
                 total_monthly_buy = df_monthly_fin['ยอดรวมสินค้า'].sum()
-                st.metric(f"ยอดซื้อรวมประจำเดือน {month_names[sel_month_fin-1]}", f"{total_monthly_buy:,.2f} บาท")
+                supplier_summary = df_monthly_fin.groupby('ชื่อบริษัทผู้ขาย')['ยอดรวมสินค้า'].sum().reset_index()
+                supplier_summary.columns = ['ชื่อบริษัทผู้ขาย', 'ยอดรวมสินค้า']
+
+                # --- แผงควบคุม Metrics แบบ Apple Style ---
+                m1, m2, m3 = st.columns(3)
+                m1.metric("ยอดซื้อรวม", f"{total_monthly_buy:,.2f} ฿")
+                m2.metric("จำนวนผู้ขาย", len(supplier_summary))
+                m3.metric("สถานะบัญชี", "ปกติ ✅")
 
                 st.divider()
 
-                # --- สรุปแยกตาม Supplier ---
-                st.write("### 🏢 สรุปยอดแยกตามผู้ขาย (Supplier Summary)")
-                
-                # รวมยอดเงินแยกตามบริษัทผู้ขาย
-                supplier_summary = df_monthly_fin.groupby('ชื่อบริษัทผู้ขาย')['ยอดรวมสินค้า'].sum().reset_index()
-                supplier_summary.columns = ['ชื่อบริษัทผู้ขาย', 'ยอดสั่งซื้อรวม (บาท)']
-                
-                # เรียงลำดับจากยอดเงินมากไปน้อย
-                supplier_summary = supplier_summary.sort_values(by='ยอดสั่งซื้อรวม (บาท)', ascending=False)
-                
-                # แสดงผลตารางสรุป
+                # --- กราฟแท่งเปรียบเทียบยอดซื้อ (Dashboard Look) ---
+                st.write("### 📊 สรุปสัดส่วนการสั่งซื้อ")
+                chart_data = supplier_summary.set_index('ชื่อบริษัทผู้ขาย')
+                st.bar_chart(chart_data)
+
+                # --- ตารางรายละเอียดแบบพรีเมียม ---
+                st.write("### 🏢 รายละเอียดบิลรายบริษัท")
                 st.dataframe(
-                    supplier_summary, 
-                    use_container_width=True, 
+                    supplier_summary.sort_values(by='ยอดรวมสินค้า', ascending=False),
+                    use_container_width=True,
                     hide_index=True,
                     column_config={
-                        "ยอดสั่งซื้อรวม (บาท)": st.column_config.NumberColumn(format="฿ %,.2f")
+                        "ยอดรวมสินค้า": st.column_config.NumberColumn("ยอดรวม (บาท)", format="฿ %,.2f")
                     }
                 )
-
-                # --- รายละเอียดบิลรายใบ ---
-                with st.expander("🔍 ดูรายละเอียดบิลรายใบของเดือนนี้"):
-                    bill_detail = df_monthly_fin.groupby(['InvoiceNo', 'ชื่อบริษัทผู้ขาย', 'วันที่'])['ยอดรวมสินค้า'].sum().reset_index()
-                    bill_detail.columns = ['เลขที่บิล', 'บริษัทผู้ขาย', 'วันที่รับเข้า', 'ยอดรวมสุทธิ']
-                    
-                    # ปรับรูปแบบวันที่ให้ดูง่ายในตาราง
-                    bill_detail['วันที่รับเข้า'] = bill_detail['วันที่รับเข้า'].dt.strftime('%d/%m/%Y')
-                    
-                    st.dataframe(
-                        bill_detail, 
-                        use_container_width=True, 
-                        hide_index=True,
-                        column_config={
-                            "ยอดรวมสุทธิ": st.column_config.NumberColumn(format="%,.2f")
-                        }
-                    )
-                    
             else:
-                st.info(f"📅 ยังไม่มีข้อมูลการซื้อในเดือน {month_names[sel_month_fin-1]} ปี {sel_year_fin}")
+                st.info(f"📅 ยังไม่มีข้อมูลการซื้อในเดือน {month_names[sel_month_fin-1]} {sel_year_fin}")
         else:
             st.warning("⚠️ ไม่พบข้อมูลบิลรับเข้าในระบบ")
 # -----------------------------
